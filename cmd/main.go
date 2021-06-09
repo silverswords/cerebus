@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
-	task "github.com/silverswords/cerebus/pkg/task/controller"
+	script "github.com/silverswords/cerebus/pkg/script/controller"
 )
 
 func main() {
@@ -25,8 +25,8 @@ func main() {
 	}
 	defer db.Close()
 
-	taskController := task.New(db)
-	taskController.RegisterRouter(router)
+	scriptController := script.New(db)
+	scriptController.RegisterRouter(router)
 
 	log.Fatal(router.Run("0.0.0.0:10001"))
 }
