@@ -190,22 +190,50 @@ func TestFIFO(t *testing.T) {
 	s.Stop()
 }
 
-func TestJSScheduler(t *testing.T) {
+func TestStartCallback(t *testing.T) {
 	taskNum := 10
 	counter := 0
 	s := New()
 	go s.Start(2)
 
 	for i := 0; i < taskNum; i++ {
-		t := NewJsTask(`console.log("counter: " + counter); counter++;`)
-		t.SetParam("counter", counter)
-		s.Schedule(t)
+		s.Schedule(TaskFunc(func(ctx context.Context) error {
+			counter++
+			return nil
+		}).AddStartCallback(func(ctx context.Context) error {
+			counter++
+			return nil
+		}))
 	}
 
 	s.Wait()
 	s.Stop()
 
-	if counter != taskNum {
+	if counter != taskNum*2 {
+		t.Errorf("counter is expected as %d, actually %d", taskNum, counter)
+	}
+}
+
+func TestFinishedCallback(t *testing.T) {
+	taskNum := 10
+	counter := 0
+	s := New()
+	go s.Start(2)
+
+	for i := 0; i < taskNum; i++ {
+		s.Schedule(TaskFunc(func(ctx context.Context) error {
+			counter++
+			return nil
+		}).AddFinishedCallback(func(ctx context.Context) error {
+			counter++
+			return nil
+		}))
+	}
+
+	s.Wait()
+	s.Stop()
+
+	if counter != taskNum*2 {
 		t.Errorf("counter is expected as %d, actually %d", taskNum, counter)
 	}
 }

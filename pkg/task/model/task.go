@@ -57,13 +57,16 @@ func CreateTable(db *sql.DB) error {
 	return nil
 }
 
-func InsertTask(db *sql.DB, scriptID uint32) error {
-	_, err := db.Exec(TaskSQLString[postgresTaskInsertTask], scriptID, "Pending")
+func InsertTask(db *sql.DB, scriptID uint32) (uint32, error) {
+	result, err := db.Exec(TaskSQLString[postgresTaskInsertTask], scriptID, "Pending")
 	if err != nil {
-		return err
+		return 0, err
 	}
-
-	return nil
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+	return uint32(id), nil
 }
 
 func ChangeTaskState(db *sql.DB, id uint32, state string) error {

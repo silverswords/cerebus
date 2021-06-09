@@ -50,8 +50,17 @@ func (w *goroutineWorker) Work() {
 			default:
 			}
 
+			for _, f := range realTask.startCallBack {
+				f(realTask.ctx)
+			}
+
 			realTask.Do(realTask.ctx)
+
 			realTask.sche.queue.Done(t)
+			for _, f := range realTask.finishedCallBack {
+				f(realTask.ctx)
+			}
+
 			w.sche.workers <- w.task
 		case <-w.stopCh:
 			close(w.task)

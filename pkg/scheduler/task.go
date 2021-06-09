@@ -28,6 +28,13 @@ type PriorityTask interface {
 	WithPriority(int) Task
 }
 
+type CallbackFunc func(context.Context) error
+type CallbackTask interface {
+	Task
+	AddStartCallback(f CallbackFunc) Task
+	AddFinishedCallback(f CallbackFunc) Task
+}
+
 // TaskFunc is a wrapper for task function.
 type TaskFunc func(context.Context) error
 
@@ -76,6 +83,22 @@ func (t TaskFunc) WithPriority(priority int) Task {
 	}
 }
 
+// AddStartCallback add the start callback func to this task
+func (t TaskFunc) AddStartCallback(f CallbackFunc) Task {
+	return &task{
+		task:          t,
+		startCallBack: []CallbackFunc{f},
+	}
+}
+
+// AddFinishedCallback add the finished callback func to this task
+func (t TaskFunc) AddFinishedCallback(f CallbackFunc) Task {
+	return &task{
+		task:             t,
+		finishedCallBack: []CallbackFunc{f},
+	}
+}
+
 // BindScheduler bind the scheduler with this task, this shouldn't called by user
 func (t TaskFunc) BindScheduler(s *Scheduler) Task {
 	return &task{
@@ -104,6 +127,9 @@ type task struct {
 	timeout    time.Duration
 	deadline   time.Time
 	priority   int
+
+	startCallBack    []CallbackFunc
+	finishedCallBack []CallbackFunc
 }
 
 // NewTask return a task
@@ -174,6 +200,18 @@ func (t *task) WithCancelFunc(timeout time.Duration) (Task, context.CancelFunc) 
 // WithPriority set the priority for this task
 func (t *task) WithPriority(priority int) Task {
 	t.priority = priority
+	return t
+}
+
+// AddStartCallback add the start callback func to this task
+func (t *task) AddStartCallback(f CallbackFunc) Task {
+	t.startCallBack = append(t.startCallBack, f)
+	return t
+}
+
+// AddFinishedCallback add the finished callback func to this task
+func (t *task) AddFinishedCallback(f CallbackFunc) Task {
+	t.finishedCallBack = append(t.finishedCallBack, f)
 	return t
 }
 
@@ -253,6 +291,22 @@ func (t *JsTask) WithPriority(priority int) Task {
 	return &task{
 		task:     t,
 		priority: priority,
+	}
+}
+
+// AddStartCallback add the start callback func to this task
+func (t *JsTask) AddStartCallback(f CallbackFunc) Task {
+	return &task{
+		task:          t,
+		startCallBack: []CallbackFunc{f},
+	}
+}
+
+// AddFinishedCallback add the finished callback func to this task
+func (t *JsTask) AddFinishedCallback(f CallbackFunc) Task {
+	return &task{
+		task:             t,
+		finishedCallBack: []CallbackFunc{f},
 	}
 }
 
