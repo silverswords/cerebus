@@ -31,13 +31,16 @@ func (sc *Scripscontroller) RegisterRouter(r gin.IRouter) {
 	}
 
 	r.POST("/register", sc.registerTask)
+	r.POST("/script/update", sc.updateScript)
 
-	r.GET("/Script", sc.getScript)
+	r.GET("/script", sc.getScript)
 }
 
 func (sc *Scripscontroller) registerTask(c *gin.Context) {
 	var req struct {
-		Script string `json:"script,omitempty" binding:"required"`
+		Script string `json:"script,omitempty"`
+		Name   string `json:"name,omitempty"`
+		Type   string `json:"type,omitempty"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -46,7 +49,28 @@ func (sc *Scripscontroller) registerTask(c *gin.Context) {
 		return
 	}
 
-	if err := model.InsertScript(sc.db, req.Script); err != nil {
+	if err := model.InsertScript(sc.db, req.Name, req.Script, req.Type); err != nil {
+		c.Error(err)
+		c.JSON(http.StatusBadGateway, gin.H{"status": http.StatusBadGateway})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": http.StatusOK})
+}
+
+func (sc *Scripscontroller) updateScript(c *gin.Context) {
+	var req struct {
+		ID     uint32
+		Script string
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"status": http.StatusBadRequest})
+		return
+	}
+
+	if err := model.UpdateScriptByID(sc.db, req.ID, req.Script); err != nil {
 		c.Error(err)
 		c.JSON(http.StatusBadGateway, gin.H{"status": http.StatusBadGateway})
 		return
@@ -64,4 +88,24 @@ func (sc *Scripscontroller) getScript(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"status": http.StatusOK, "script": scripts})
+}
+
+func (sc *Scripscontroller) deleteScript(c *gin.Context) {
+	var req struct {
+		ID uint32
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"status": http.StatusBadRequest})
+		return
+	}
+
+	if err := model.DeleteScriptByID(sc.db, req.ID); err != nil {
+		c.Error(err)
+		c.JSON(http.StatusBadGateway, gin.H{"status": http.StatusBadGateway})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": http.StatusOK})
 }

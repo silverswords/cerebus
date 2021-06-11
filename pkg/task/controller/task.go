@@ -58,6 +58,7 @@ func (tc *TaskController) getTasks(c *gin.Context) {
 func (tc *TaskController) run(c *gin.Context) {
 	var req struct {
 		ID     uint32                 `json:"id,omitempty" binding:"required"`
+		Name   string                 `json:"name,omitempty"`
 		Params map[string]interface{} `json:"params,omitempty"`
 	}
 
@@ -76,13 +77,6 @@ func (tc *TaskController) run(c *gin.Context) {
 		}
 	}
 
-	taskID, err := model.InsertTask(tc.db, req.ID)
-	if err != nil {
-		c.Error(err)
-		c.JSON(http.StatusBadGateway, gin.H{"status": http.StatusBadGateway})
-		return
-	}
-
 	script, err := script.SelectScriptByID(tc.db, req.ID)
 	if err != nil {
 		c.Error(err)
@@ -90,7 +84,14 @@ func (tc *TaskController) run(c *gin.Context) {
 		return
 	}
 
-	realScript, err := url.QueryUnescape(script)
+	taskID, err := model.InsertTask(tc.db, req.Name, req.ID)
+	if err != nil {
+		c.Error(err)
+		c.JSON(http.StatusBadGateway, gin.H{"status": http.StatusBadGateway})
+		return
+	}
+
+	realScript, err := url.QueryUnescape(script.Script)
 	if err != nil {
 		c.Error(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"status": http.StatusInternalServerError})
@@ -98,7 +99,7 @@ func (tc *TaskController) run(c *gin.Context) {
 	}
 
 	tc.sche.Schedule(scheduler.TaskFunc(func(context context.Context) error {
-		file, err := os.Create(fmt.Sprintf("%d.txt", req.ID))
+		file, err := os.Create(fmt.Sprintf("%d.txt", taskID))
 		if err != nil {
 
 			return err
