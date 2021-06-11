@@ -8,6 +8,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/silverswords/cerebus/pkg/scheduler"
 	script "github.com/silverswords/cerebus/pkg/script/controller"
 	task "github.com/silverswords/cerebus/pkg/task/controller"
@@ -27,9 +29,22 @@ func main() {
 	}
 	defer db.Close()
 
+	endpoint := "server:9000"
+	accessKeyID := "minioadmin"
+	secretAccessKey := "minioadmin"
+
+	minioClient, err := minio.New(endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
+		Secure: false,
+	})
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	sche := scheduler.New()
+	go sche.Start(2)
 	scriptController := script.New(db)
-	taskController := task.New(db, sche)
+	taskController := task.New(db, sche, minioClient)
 
 	scriptController.RegisterRouter(router)
 	taskController.RegisterRouter(router)

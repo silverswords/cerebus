@@ -34,9 +34,9 @@ var scriptSQLString = map[int]string{
 	postgresScriptCreateDatabase: fmt.Sprintf(`CREATE SCHEMA IF NOT EXISTS %s;`, SchemaName),
 	postgresScriptCreateTable: fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s.%s (
 		id serial PRIMARY KEY,
-		name CHAR(50) NOT NULL,
-		script text NOT NULL,
-		type CHAR(10) NOT NULL,
+		name VARCHAR(50) NOT NULL UNIQUE DEFAULT '',
+		script text NOT NULL DEFAULT '',
+		type VARCHAR(20) NOT NULL DEFAULT '',
 		create_time timestamp DEFAULT timestamp '2000-01-01 00:00:00'
 	);`, SchemaName, TableName),
 	postgresScriptRegisterScript:   fmt.Sprintf(`INSERT INTO %s.%s (name, script, type, create_time) VALUES ($1, $2, $3, current_timestamp);`, SchemaName, TableName),
@@ -112,7 +112,7 @@ func SelectScripts(db *sql.DB) ([]*Script, error) {
 
 func SelectScriptByID(db *sql.DB, id uint32) (*Script, error) {
 	row := db.QueryRow(scriptSQLString[postgresScriptSelectScriptByID], id)
-	var script *Script
+	script := &Script{}
 	if err := row.Scan(&script.ID, &script.Name, &script.Script, &script.Type, &script.CreateTime); err != nil {
 		return nil, err
 	}

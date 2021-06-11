@@ -1,5 +1,7 @@
 package scheduler
 
+import "errors"
+
 type Worker interface {
 	Work()
 }
@@ -46,19 +48,39 @@ func (w *goroutineWorker) Work() {
 			case <-realTask.ctx.Done():
 				realTask.sche.queue.Done(t)
 				realTask.cancelFunc()
+				if realTask.catchFunc != nil {
+					realTask.catchFunc(errors.New("Task cancel"))
+					break
+				}
 				return
 			default:
 			}
 
 			for _, f := range realTask.startCallBack {
-				f(realTask.ctx)
+				if err := f(realTask.ctx); err != nil {
+					if realTask.catchFunc != nil {
+						realTask.catchFunc(err)
+						break
+					}
+				}
 			}
 
-			realTask.Do(realTask.ctx)
+			if err := realTask.Do(realTask.ctx); err != nil {
+				if realTask.catchFunc != nil {
+					realTask.catchFunc(err)
+					break
+				}
+			}
 
 			realTask.sche.queue.Done(t)
 			for _, f := range realTask.finishedCallBack {
-				f(realTask.ctx)
+				if err := f(realTask.ctx); err != nil {
+					if realTask.catchFunc != nil {
+						realTask.catchFunc(err)
+						break
+					}
+				}
+
 			}
 
 			w.sche.workers <- w.task

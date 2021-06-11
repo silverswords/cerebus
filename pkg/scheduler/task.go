@@ -16,8 +16,10 @@ type Task interface {
 	SetContext(context context.Context) Task
 }
 
+type CatchFunc func(err error)
 type RetryTask interface {
 	Task
+	WithCatch(CatchFunc) Task
 	WithRetry(times uint) Task
 	WithTimeout(timeout time.Duration) Task
 	WithCancelFunc(timeout time.Duration) (Task, context.CancelFunc)
@@ -43,6 +45,14 @@ var _ Task = TaskFunc(func(context.Context) error { return nil })
 // Do is the Task interface implementation for type TaskFunc.
 func (t TaskFunc) Do(ctx context.Context) error {
 	return t(ctx)
+}
+
+// WithCatch set the catch function for this task
+func (t TaskFunc) WithCatch(f CatchFunc) Task {
+	return &task{
+		task:      t,
+		catchFunc: f,
+	}
 }
 
 // WithRetry set the retry times for this task
@@ -123,6 +133,7 @@ type task struct {
 
 	sche *Scheduler
 
+	catchFunc  CatchFunc
 	retryTimes uint
 	timeout    time.Duration
 	deadline   time.Time
@@ -142,6 +153,12 @@ func NewTask(f TaskFunc) Task {
 // Do is the Task interface implementation
 func (t *task) Do(ctx context.Context) error {
 	return t.task.Do(ctx)
+}
+
+// WithCatch set the catch function for this task
+func (t *task) WithCatch(f CatchFunc) Task {
+	t.catchFunc = f
+	return t
 }
 
 // WithRetry set the retry times for this task
@@ -254,6 +271,14 @@ func (s *JsTask) Do(context.Context) error {
 	}
 
 	return nil
+}
+
+// WithCatch set the catch function for this task
+func (t *JsTask) WithCatch(f CatchFunc) Task {
+	return &task{
+		task:      t,
+		catchFunc: f,
+	}
 }
 
 // WithRetry set the retry times for this task

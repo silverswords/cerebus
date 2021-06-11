@@ -30,17 +30,17 @@ func (sc *Scripscontroller) RegisterRouter(r gin.IRouter) {
 		return
 	}
 
-	r.POST("/register", sc.registerTask)
+	r.POST("/add", sc.addScript)
 	r.POST("/script/update", sc.updateScript)
 
 	r.GET("/script", sc.getScript)
 }
 
-func (sc *Scripscontroller) registerTask(c *gin.Context) {
+func (sc *Scripscontroller) addScript(c *gin.Context) {
 	var req struct {
 		Script string `json:"script,omitempty"`
-		Name   string `json:"name,omitempty"`
-		Type   string `json:"type,omitempty"`
+		Name   string `json:"name,omitempty" binding:"required"`
+		Type   string `json:"type,omitempty" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -60,8 +60,8 @@ func (sc *Scripscontroller) registerTask(c *gin.Context) {
 
 func (sc *Scripscontroller) updateScript(c *gin.Context) {
 	var req struct {
-		ID     uint32
-		Script string
+		ID     uint32 `json:"id,omitempty"`
+		Script string `json:"script,omitempty"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
