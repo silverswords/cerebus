@@ -37,7 +37,7 @@ var scriptSQLString = map[int]string{
 		name CHAR(50) NOT NULL,
 		script text NOT NULL,
 		type CHAR(10) NOT NULL,
-		create_time timestamp
+		create_time timestamp DEFAULT timestamp '2000-01-01 00:00:00'
 	);`, SchemaName, TableName),
 	postgresScriptRegisterScript:   fmt.Sprintf(`INSERT INTO %s.%s (name, script, type, create_time) VALUES ($1, $2, $3, current_timestamp);`, SchemaName, TableName),
 	postgresScriptSelectAll:        fmt.Sprintf(`SELECT id, name, script, type, create_time FROM %s.%s;`, SchemaName, TableName),
@@ -132,7 +132,7 @@ func UpdateScriptByID(db *sql.DB, id uint32, script string) error {
 	}
 
 	if num == 0 {
-		return errors.New("indival update")
+		return errors.New("invalid update")
 	}
 
 	return nil
@@ -150,7 +150,7 @@ func DeleteScriptByID(db *sql.DB, id uint32) error {
 	}
 
 	if num == 0 {
-		return errors.New("indival delete")
+		return errors.New("invalid delete")
 	}
 
 	return nil

@@ -51,7 +51,7 @@ func (tc *TaskController) getTasks(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": http.StatusOK, "script": tasks})
+	c.JSON(http.StatusOK, gin.H{"status": http.StatusOK, "tasks": tasks})
 
 }
 
@@ -119,7 +119,7 @@ func (tc *TaskController) run(c *gin.Context) {
 
 		return nil
 	}).AddStartCallback(func(context.Context) error {
-		err := model.ChangeTaskState(tc.db, taskID, "Running")
+		err := model.TaskRun(tc.db, taskID)
 		if err != nil {
 			return err
 		}
