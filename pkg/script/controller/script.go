@@ -38,9 +38,8 @@ func (sc *Scripscontroller) RegisterRouter(r gin.IRouter) {
 
 func (sc *Scripscontroller) addScript(c *gin.Context) {
 	var req struct {
-		Script string `json:"script,omitempty"`
-		Name   string `json:"name,omitempty" binding:"required"`
-		Type   string `json:"type,omitempty" binding:"required"`
+		Name string `json:"name,omitempty" binding:"required"`
+		Type string `json:"type,omitempty" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -49,7 +48,7 @@ func (sc *Scripscontroller) addScript(c *gin.Context) {
 		return
 	}
 
-	if err := model.InsertScript(sc.db, req.Name, req.Script, req.Type); err != nil {
+	if err := model.InsertScript(sc.db, req.Name, req.Type); err != nil {
 		c.Error(err)
 		c.JSON(http.StatusBadGateway, gin.H{"status": http.StatusBadGateway})
 		return
@@ -60,8 +59,8 @@ func (sc *Scripscontroller) addScript(c *gin.Context) {
 
 func (sc *Scripscontroller) updateScript(c *gin.Context) {
 	var req struct {
-		ID     uint32 `json:"id,omitempty"`
-		Script string `json:"script,omitempty"`
+		ID     uint32 `json:"id,omitempty" binding:"required"`
+		Script string `json:"script,omitempty" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {

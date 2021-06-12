@@ -37,12 +37,12 @@ var scriptSQLString = map[int]string{
 		name VARCHAR(50) NOT NULL UNIQUE DEFAULT '',
 		script text NOT NULL DEFAULT '',
 		type VARCHAR(20) NOT NULL DEFAULT '',
-		create_time timestamp DEFAULT timestamp '2000-01-01 00:00:00'
+		create_time timestamp NOT NULL DEFAULT timestamp '2000-01-01 00:00:00'
 	);`, SchemaName, TableName),
-	postgresScriptRegisterScript:   fmt.Sprintf(`INSERT INTO %s.%s (name, script, type, create_time) VALUES ($1, $2, $3, current_timestamp);`, SchemaName, TableName),
+	postgresScriptRegisterScript:   fmt.Sprintf(`INSERT INTO %s.%s (name, type, create_time) VALUES ($1, $2, current_timestamp);`, SchemaName, TableName),
 	postgresScriptSelectAll:        fmt.Sprintf(`SELECT id, name, script, type, create_time FROM %s.%s;`, SchemaName, TableName),
 	postgresScriptSelectScriptByID: fmt.Sprintf(`SELECT id, name, script, type, create_time FROM %s.%s WHERE id = $1;`, SchemaName, TableName),
-	postgresScriptUpdateScriptByID: fmt.Sprintf("UPDATE script = $1 FROM %s.%s WHERE id = $2", SchemaName, TableName),
+	postgresScriptUpdateScriptByID: fmt.Sprintf("UPDATE %s.%s SET script = $1 WHERE id = $2", SchemaName, TableName),
 	postgresScriptDeleteScriptByID: fmt.Sprintf("DELETE FROM %s.%s WHERE id = $1", SchemaName, TableName),
 }
 
@@ -64,8 +64,8 @@ func CreateTable(db *sql.DB) error {
 	return nil
 }
 
-func InsertScript(db *sql.DB, name string, script string, scriptType string) error {
-	_, err := db.Exec(scriptSQLString[postgresScriptRegisterScript], name, script, scriptType)
+func InsertScript(db *sql.DB, name string, scriptType string) error {
+	_, err := db.Exec(scriptSQLString[postgresScriptRegisterScript], name, scriptType)
 	if err != nil {
 		return err
 	}

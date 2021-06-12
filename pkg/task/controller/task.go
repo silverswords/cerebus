@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 
 	"github.com/gin-gonic/gin"
 	"github.com/minio/minio-go/v7"
@@ -124,23 +125,29 @@ func (tc *TaskController) run(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"status": http.StatusInternalServerError})
 		return
 	}
-	filePath := fmt.Sprintf("%d.txt", taskID)
-	if err := tc.sche.Schedule(scheduler.TaskFunc(func(context context.Context) error {
-		file, err := os.Create(filePath)
-		if err != nil {
 
+	scriptPath := fmt.Sprintf("%d.js", taskID)
+	resultPath := fmt.Sprintf("%d.txt", taskID)
+	if err := tc.sche.Schedule(scheduler.TaskFunc(func(context context.Context) error {
+		scriptFile, err := os.Create(scriptPath)
+		if err != nil {
 			return err
 		}
-		defer file.Close()
+		defer scriptFile.Close()
 
-		originStdout := os.Stdout
-		os.Stdout = file
-		defer func() {
-			os.Stdout = originStdout
-		}()
+		if _, err := scriptFile.WriteString(realScript); err != nil {
+			return err
+		}
 
-		_, err = vm.Run(realScript)
+		resultFile, err := os.Create(resultPath)
 		if err != nil {
+			return err
+		}
+		defer resultFile.Close()
+		process := exec.Command("node", scriptPath)
+		process.Stdout = resultFile
+
+		if err := process.Run(); err != nil {
 			return err
 		}
 
@@ -152,21 +159,26 @@ func (tc *TaskController) run(c *gin.Context) {
 		}
 		return nil
 	}).(scheduler.CallbackTask).AddFinishedCallback(func(context.Context) error {
-		info, err := tc.minioClient.FPutObject(context.Background(), bucketName, filePath, filePath, minio.PutObjectOptions{})
+		info, err := tc.minioClient.FPutObject(context.Background(), bucketName, resultPath, resultPath, minio.PutObjectOptions{})
 
 		if err != nil {
 			log.Fatalln(err)
 		}
 
 		log.Print(info)
-		err = os.Remove(filePath)
-		if err != nil {
+
+		if err := os.Remove(resultPath); err != nil {
 			return err
 		}
-		err = model.TaskFinish(tc.db, taskID)
-		if err != nil {
+
+		if err := os.Remove(scriptPath); err != nil {
 			return err
 		}
+
+		if err := model.TaskFinish(tc.db, taskID); err != nil {
+			return err
+		}
+
 		return nil
 	}).(scheduler.RetryTask).WithCatch(func(err error) {
 		model.TaskError(tc.db, taskID, err)
