@@ -12,7 +12,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/minio/minio-go/v7"
-	"github.com/robertkrimen/otto"
 	"github.com/silverswords/cerebus/pkg/scheduler"
 	script "github.com/silverswords/cerebus/pkg/script/model"
 	"github.com/silverswords/cerebus/pkg/task/model"
@@ -90,15 +89,6 @@ func (tc *TaskController) run(c *gin.Context) {
 		return
 	}
 
-	vm := otto.New()
-	for key, value := range req.Params {
-		if err := vm.Set(key, value); err != nil {
-			c.Error(err)
-			c.JSON(http.StatusBadRequest, gin.H{"status": http.StatusBadRequest})
-			return
-		}
-	}
-
 	script, err := script.SelectScriptByID(tc.db, req.ID)
 	if err != nil {
 		c.Error(err)
@@ -126,17 +116,11 @@ func (tc *TaskController) run(c *gin.Context) {
 		return
 	}
 
-	scriptPath := fmt.Sprintf("%d.js", taskID)
 	resultPath := fmt.Sprintf("%d.txt", taskID)
 	if err := tc.sche.Schedule(scheduler.TaskFunc(func(context context.Context) error {
-		scriptFile, err := os.Create(scriptPath)
-		if err != nil {
-			return err
-		}
-		defer scriptFile.Close()
-
-		if _, err := scriptFile.WriteString(realScript); err != nil {
-			return err
+		args := []string{"-e", realScript}
+		for key, value := range req.Params {
+			args = append(args, fmt.Sprintf("%s=%s", key, value))
 		}
 
 		resultFile, err := os.Create(resultPath)
@@ -144,7 +128,7 @@ func (tc *TaskController) run(c *gin.Context) {
 			return err
 		}
 		defer resultFile.Close()
-		process := exec.Command("node", scriptPath)
+		process := exec.Command("node", args...)
 		process.Stdout = resultFile
 
 		if err := process.Run(); err != nil {
@@ -168,10 +152,6 @@ func (tc *TaskController) run(c *gin.Context) {
 		log.Print(info)
 
 		if err := os.Remove(resultPath); err != nil {
-			return err
-		}
-
-		if err := os.Remove(scriptPath); err != nil {
 			return err
 		}
 
